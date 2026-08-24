@@ -1,6 +1,7 @@
 {
   "name": "appstore-play-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "mcpName": "io.github.johnbilousov/appstore-play-mcp",
   "description": "Read-only MCP server for App Store Connect and Google Play — one set of tools over both stores: apps, releases, reviews, crash vitals, sales.",
   "license": "MIT",
   "author": "Ivan Bilousov",
@@ -9,8 +10,14 @@
     "appstore-play-mcp": "dist/index.js"
   },
   "main": "dist/server.js",
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -22,9 +29,14 @@
     "indie-dev",
     "mobile"
   ],
-  "repository": { "type": "git", "url": "git+https://github.com/JohnBilousov/appstore-play-mcp.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JohnBilousov/appstore-play-mcp.git"
+  },
   "homepage": "https://github.com/JohnBilousov/appstore-play-mcp#readme",
-  "bugs": { "url": "https://github.com/JohnBilousov/appstore-play-mcp/issues" },
+  "bugs": {
+    "url": "https://github.com/JohnBilousov/appstore-play-mcp/issues"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

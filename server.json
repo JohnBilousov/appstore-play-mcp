@@ -1,0 +1,61 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.johnbilousov/appstore-play-mcp",
+  "title": "App Store & Google Play",
+  "description": "Read-only access to App Store Connect and Google Play: apps, releases, and reviews.",
+  "version": "0.1.1",
+  "websiteUrl": "https://github.com/JohnBilousov/appstore-play-mcp",
+  "repository": {
+    "url": "https://github.com/JohnBilousov/appstore-play-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "appstore-play-mcp",
+      "version": "0.1.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ASC_KEY_ID",
+          "description": "App Store Connect API key id. Omit the App Store block to run Play-only.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "ASC_ISSUER_ID",
+          "description": "App Store Connect issuer id.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "ASC_KEY_PATH",
+          "description": "Path to the AuthKey_<KEY_ID>.p8 private key downloaded from App Store Connect.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "filepath"
+        },
+        {
+          "name": "PLAY_SERVICE_ACCOUNT_PATH",
+          "description": "Path to the Google service account JSON with Android Publisher access.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "filepath"
+        },
+        {
+          "name": "PLAY_PACKAGES",
+          "description": "Comma-separated Play package names. Required for Play: the API cannot list apps.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

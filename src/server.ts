@@ -18,7 +18,7 @@ import { DemoStoreClient } from "./stores/demo.js";
 import { PlayClient } from "./stores/play.js";
 import { StoreError, type AppSummary, type Release, type Review, type Store, type StoreClient } from "./stores/types.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 export type StoreFilter = "appstore" | "play" | "both" | undefined;
 
