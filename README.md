@@ -219,12 +219,18 @@ test/
 
 ## Releasing
 
-Bump the version in `package.json`, `server.json`, and `VERSION` in `src/server.ts` together (a
-test asserts they can't drift), commit, push, then publish a GitHub Release with a matching
-`vX.Y.Z` tag. That triggers [`.github/workflows/publish.yml`](.github/workflows/publish.yml),
-which runs the test suite and publishes to npm with [provenance](https://docs.npmjs.com/generating-provenance-statements)
-— the package page shows a verified link back to this exact commit and workflow run, not just a
-name on the registry.
+Publishing uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) —
+no `NPM_TOKEN` secret, nothing that can leak or expire. One-time setup on npmjs.com, under the
+package's **Settings → Trusted publishing → GitHub Actions**: organization `JohnBilousov`, this
+repository, workflow filename `publish.yml`.
+
+To cut a release: bump the version in `package.json`, `server.json`, and `VERSION` in
+`src/server.ts` together (a test asserts they can't drift), commit, push, then publish a GitHub
+Release with a matching `vX.Y.Z` tag. That triggers
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml), which runs the test suite and
+publishes to npm with [provenance](https://docs.npmjs.com/generating-provenance-statements) — the
+package page shows a verified link back to this exact commit and workflow run, not just a name on
+the registry.
 
 ## Roadmap
 
