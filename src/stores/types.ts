@@ -53,7 +53,10 @@ export interface Review {
   title?: string;
   body: string;
   author?: string;
+  /** ISO country the review was left in. App Store only — Play does not expose it. */
   territory?: string;
+  /** Language the review was written in. Play only — reported instead of a country. */
+  language?: string;
   device?: string;
   appVersion?: string;
   createdAt?: string;

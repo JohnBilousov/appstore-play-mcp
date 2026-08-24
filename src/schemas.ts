@@ -45,7 +45,12 @@ const appShape = z.object({
   storeUrl: z.string().optional(),
 });
 
-export const listAppsOutput = { count: z.number(), apps: z.array(appShape) };
+const unavailableShape = z
+  .array(z.string())
+  .optional()
+  .describe("Stores or apps that could not be read. A non-empty list means this answer is partial");
+
+export const listAppsOutput = { count: z.number(), apps: z.array(appShape), unavailable: unavailableShape };
 
 export const getReleasesOutput = {
   count: z.number(),
@@ -64,6 +69,7 @@ export const getReleasesOutput = {
       createdAt: z.string().optional(),
     }),
   ),
+  unavailable: unavailableShape,
 };
 
 export const getReviewsOutput = {
@@ -79,13 +85,15 @@ export const getReviewsOutput = {
       title: z.string().optional(),
       body: z.string(),
       author: z.string().optional(),
-      territory: z.string().optional(),
+      territory: z.string().optional().describe("ISO country the review came from. App Store only"),
+      language: z.string().optional().describe("Language the review was written in. Google Play only"),
       device: z.string().optional(),
       appVersion: z.string().optional(),
       createdAt: z.string().optional(),
       developerResponse: z.string().optional(),
     }),
   ),
+  unavailable: unavailableShape,
 };
 
 export const healthOutput = {

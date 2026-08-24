@@ -48,6 +48,19 @@ async function run(handler: () => Promise<CallToolResult>): Promise<CallToolResu
   }
 }
 
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Appends what could not be read to the human-facing text. A partial answer
+ * must never be presentable as a complete one.
+ */
+function withNotes(text: string, notes: string[]): string {
+  if (notes.length === 0) return text;
+  return [text, "", `Could not read: ${notes.join(" · ")}`].join("\n");
+}
+
 /**
  * Fans a read out across the configured stores. One store failing does not
  * sink the whole call — the failure comes back as a note alongside whatever
@@ -81,16 +94,13 @@ class Registry {
     filter: StoreFilter,
     read: (client: StoreClient) => Promise<T[]>,
   ): Promise<{ items: T[]; notes: string[] }> {
-    const results = await Promise.allSettled(this.select(filter).map((client) => read(client)));
+    const clients = this.select(filter);
+    const results = await Promise.allSettled(clients.map((client) => read(client)));
     const items: T[] = [];
     const notes: string[] = [];
     results.forEach((result, index) => {
-      const client = this.select(filter)[index]!;
       if (result.status === "fulfilled") items.push(...result.value);
-      else {
-        const reason = result.reason;
-        notes.push(`${client.store}: ${reason instanceof Error ? reason.message : String(reason)}`);
-      }
+      else notes.push(`${clients[index]!.store}: ${describeError(result.reason)}`);
     });
     if (items.length === 0 && notes.length > 0) {
       throw new StoreError(notes.join(" · "), "config");
@@ -98,24 +108,41 @@ class Registry {
     return { items, notes };
   }
 
-  /** Resolves an id, package name, or bundle id to concrete apps. */
-  async resolve(filter: StoreFilter, appId?: string): Promise<Array<{ client: StoreClient; app: AppSummary }>> {
+  /**
+   * Resolves an id, package name, or bundle id to concrete apps, reporting any
+   * store it could not reach. Swallowing that failure would make a broken
+   * credential indistinguishable from an app that genuinely has no data.
+   */
+  async resolve(
+    filter: StoreFilter,
+    appId?: string,
+  ): Promise<{ pairs: Array<{ client: StoreClient; app: AppSummary }>; notes: string[] }> {
     const pairs: Array<{ client: StoreClient; app: AppSummary }> = [];
+    const notes: string[] = [];
+
     for (const client of this.select(filter)) {
-      const apps = await client.listApps().catch(() => [] as AppSummary[]);
+      let apps: AppSummary[];
+      try {
+        apps = await client.listApps();
+      } catch (error) {
+        notes.push(`${client.store}: ${describeError(error)}`);
+        continue;
+      }
       for (const app of apps) {
         if (!appId || app.id === appId || app.bundleId === appId) pairs.push({ client, app });
       }
     }
+
     if (pairs.length === 0) {
+      const reason = notes.length > 0 ? ` No store could be read — ${notes.join(" · ")}.` : "";
       throw new StoreError(
         appId ? `Nothing matched "${appId}".` : "No apps are reachable with the current credentials.",
         "config",
         404,
-        "Call list_apps to see what is visible. On Play, apps must be named in PLAY_PACKAGES.",
+        `Call list_apps to see what is visible. On Play, apps must be named in PLAY_PACKAGES.${reason}`,
       );
     }
-    return pairs;
+    return { pairs, notes };
   }
 }
 
@@ -173,8 +200,10 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
     async ({ store }) =>
       run(async () => {
         const { items, notes } = await registry.each(store, (client) => client.listApps());
-        const text = [formatApps(items), ...notes.map((note) => `\n(unavailable — ${note})`)].join("");
-        return { content: [{ type: "text", text }], structuredContent: { count: items.length, apps: items } };
+        return {
+          content: [{ type: "text", text: withNotes(formatApps(items), notes) }],
+          structuredContent: { count: items.length, apps: items, unavailable: notes },
+        };
       }),
   );
 
@@ -188,11 +217,11 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
     },
     async ({ appId, store }) =>
       run(async () => {
-        const pairs = await registry.resolve(store, appId);
+        const { pairs, notes } = await registry.resolve(store, appId);
         const apps = pairs.map((pair) => pair.app);
         return {
-          content: [{ type: "text", text: formatApps(apps) }],
-          structuredContent: { count: apps.length, apps },
+          content: [{ type: "text", text: withNotes(formatApps(apps), notes) }],
+          structuredContent: { count: apps.length, apps, unavailable: notes },
         };
       }),
   );
@@ -209,21 +238,22 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
     },
     async ({ appId, store }) =>
       run(async () => {
-        const pairs = await registry.resolve(store, appId);
+        const { pairs, notes } = await registry.resolve(store, appId);
         const settled = await Promise.allSettled(
           pairs.map(async ({ client, app }) =>
             (await client.getReleases(app.id)).map((release) => ({ ...release, appName: app.name })),
           ),
         );
         const releases: Array<Release & { appName: string }> = [];
-        const notes: string[] = [];
         settled.forEach((result, index) => {
           if (result.status === "fulfilled") releases.push(...result.value);
-          else notes.push(`${pairs[index]!.app.name}: ${String(result.reason?.message ?? result.reason)}`);
+          else notes.push(`${pairs[index]!.app.name}: ${describeError(result.reason)}`);
         });
 
-        const text = [formatReleases(releases), ...notes.map((note) => `\n(unavailable — ${note})`)].join("");
-        return { content: [{ type: "text", text }], structuredContent: { count: releases.length, releases } };
+        return {
+          content: [{ type: "text", text: withNotes(formatReleases(releases), notes) }],
+          structuredContent: { count: releases.length, releases, unavailable: notes },
+        };
       }),
   );
 
@@ -239,7 +269,7 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
     },
     async ({ appId, store, limit, minRating, maxRating }) =>
       run(async () => {
-        const pairs = await registry.resolve(store, appId);
+        const { pairs, notes } = await registry.resolve(store, appId);
         const settled = await Promise.allSettled(
           pairs.map(async ({ client, app }) =>
             (await client.getReviews(app.id, { limit, minRating, maxRating })).map((review) => ({
@@ -250,23 +280,22 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
         );
 
         const reviews: Array<Review & { appName: string }> = [];
-        const notes: string[] = [];
         settled.forEach((result, index) => {
           if (result.status === "fulfilled") reviews.push(...result.value);
-          else notes.push(`${pairs[index]!.app.name}: ${String(result.reason?.message ?? result.reason)}`);
+          else notes.push(`${pairs[index]!.app.name}: ${describeError(result.reason)}`);
         });
 
         reviews.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
         const average =
           reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : null;
 
-        const text = [formatReviews(reviews), ...notes.map((note) => `\n(unavailable — ${note})`)].join("");
         return {
-          content: [{ type: "text", text }],
+          content: [{ type: "text", text: withNotes(formatReviews(reviews), notes) }],
           structuredContent: {
             count: reviews.length,
             averageRating: average === null ? null : Math.round(average * 100) / 100,
             reviews,
+            unavailable: notes,
           },
         };
       }),

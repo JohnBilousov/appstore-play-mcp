@@ -6,7 +6,44 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import { loadConfig } from "../src/config.js";
 import { VERSION, createServer } from "../src/server.js";
-import { normalizeAppStoreState, normalizePlayState } from "../src/stores/types.js";
+import { DemoStoreClient } from "../src/stores/demo.js";
+import {
+  StoreError,
+  normalizeAppStoreState,
+  normalizePlayState,
+  type AppSummary,
+  type Release,
+  type Review,
+  type StoreClient,
+} from "../src/stores/types.js";
+
+/** A store whose credentials are rejected — every read fails the same way. */
+class UnreachableStore implements StoreClient {
+  readonly store = "appstore" as const;
+  async describe() {
+    return { ok: false, detail: "credentials rejected" };
+  }
+  async listApps(): Promise<AppSummary[]> {
+    throw new StoreError("credentials rejected", "appstore", 401);
+  }
+  async getApp(): Promise<AppSummary> {
+    throw new StoreError("credentials rejected", "appstore", 401);
+  }
+  async getReleases(): Promise<Release[]> {
+    throw new StoreError("credentials rejected", "appstore", 401);
+  }
+  async getReviews(): Promise<Review[]> {
+    throw new StoreError("credentials rejected", "appstore", 401);
+  }
+}
+
+async function connectWithClients(clients: StoreClient[]) {
+  const server = createServer(loadConfig({ STORES_DEMO: "1" } as NodeJS.ProcessEnv), clients);
+  const client = new Client({ name: "test", version: "0.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+  return client;
+}
 
 async function connectDemoClient() {
   const config = loadConfig({ STORES_DEMO: "1" } as NodeJS.ProcessEnv);
@@ -175,5 +212,57 @@ describe("release metadata", () => {
 
   it("stays inside the registry's description limit", () => {
     expect(registry.description.length).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("a store that cannot be reached", () => {
+  // Regression: resolve() used to swallow the failure, so a rejected credential
+  // and an app with genuinely no reviews produced the same empty answer.
+  it("reports the failure instead of returning a silent partial answer", async () => {
+    const client = await connectWithClients([new UnreachableStore(), new DemoStoreClient("play")]);
+    const result = await client.callTool({ name: "get_reviews", arguments: {} });
+    const structured = result.structuredContent as { unavailable: string[]; reviews: unknown[] };
+
+    expect(structured.unavailable).toHaveLength(1);
+    expect(structured.unavailable[0]).toContain("credentials rejected");
+    expect(JSON.stringify(result.content)).toContain("Could not read");
+    // The half that still works must survive.
+    expect(structured.reviews.length).toBeGreaterThan(0);
+  });
+
+  it("does the same for releases and the app listing", async () => {
+    const client = await connectWithClients([new UnreachableStore(), new DemoStoreClient("play")]);
+    for (const name of ["get_releases", "list_apps"]) {
+      const result = await client.callTool({ name, arguments: {} });
+      const structured = result.structuredContent as { unavailable: string[] };
+      expect(structured.unavailable, `${name} must report the unreachable store`).toHaveLength(1);
+    }
+  });
+
+  it("explains why when every store is down", async () => {
+    const client = await connectWithClients([new UnreachableStore()]);
+    const result = await client.callTool({ name: "get_reviews", arguments: {} });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain("credentials rejected");
+  });
+});
+
+describe("review locality", () => {
+  // Regression: Play's reviewerLanguage was being written into `territory`,
+  // which the App Store fills with an ISO country. One field, two meanings.
+  it("keeps a country and a language in separate fields", async () => {
+    const client = await connectDemoClient();
+    const result = await client.callTool({ name: "get_reviews", arguments: {} });
+    const { reviews } = result.structuredContent as {
+      reviews: Array<{ store: string; territory?: string; language?: string }>;
+    };
+
+    const ios = reviews.filter((review) => review.store === "appstore");
+    const play = reviews.filter((review) => review.store === "play");
+    expect(ios.length).toBeGreaterThan(0);
+    expect(play.length).toBeGreaterThan(0);
+
+    expect(ios.every((review) => review.territory && !review.language)).toBe(true);
+    expect(play.every((review) => review.language && !review.territory)).toBe(true);
   });
 });

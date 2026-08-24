@@ -53,7 +53,12 @@ export function formatReviews(reviews: Array<Review & { appName?: string }>): st
   const average = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
   const lines = reviews.map((review) => {
     const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
-    const where = [review.appName ?? review.appId, STORE_LABEL[review.store], review.territory, review.device]
+    const where = [
+      review.appName ?? review.appId,
+      STORE_LABEL[review.store],
+      review.territory ?? review.language,
+      review.device,
+    ]
       .filter(Boolean)
       .join(" · ");
     const date = review.createdAt ? review.createdAt.slice(0, 10) : "";

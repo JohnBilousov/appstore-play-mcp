@@ -93,6 +93,9 @@ export class AppStoreClient implements StoreClient {
         signal: controller.signal,
       });
     } catch (error) {
+      // bearer() already throws a StoreError with its own hint; re-wrapping it
+      // would leak the class name into text meant for a person.
+      if (error instanceof StoreError) throw error;
       const reason = error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
       throw new StoreError(`App Store request failed: ${reason}`, "appstore");
     } finally {

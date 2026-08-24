@@ -266,7 +266,8 @@ export class PlayClient implements StoreClient {
         rating: user?.starRating ?? 0,
         body: user?.text ?? "",
         author: review.authorName || undefined,
-        territory: user?.reviewerLanguage || undefined,
+        // Play reports the reviewer's language, never a country — see Review.language.
+        language: user?.reviewerLanguage || undefined,
         device: user?.device || undefined,
         appVersion: user?.appVersionName || undefined,
         createdAt: seconds ? new Date(seconds * 1000).toISOString() : undefined,

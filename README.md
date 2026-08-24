@@ -68,6 +68,19 @@ releases with a `status` and a rollout fraction. Both are normalised:
 
 Each store's own wording is preserved in `rawState`, so nothing is lost in translation.
 
+Reviews get the same treatment, with one honest exception: the stores do not report the same
+thing about where a review came from, so they do not share a field.
+
+| Field | App Store | Google Play |
+|---|---|---|
+| `territory` | ISO country (`DEU`, `USA`) | — not exposed |
+| `language` | — not exposed | reviewer's language (`pl`, `en`) |
+| `device` | — not exposed | device model |
+| `appVersion` | — not exposed | version reviewed |
+
+Collapsing a language into a country field would have made the unified shape look tidier and
+report something false, so each store fills only what it actually knows.
+
 ## Setup
 
 Listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.JohnBilousov/appstore-play-mcp`, so clients that read the registry can find it on
@@ -155,9 +168,11 @@ These are the stores' constraints, not the server's:
 `StoreClient`; a `DemoStoreClient` implements it a third time on fixtures. Tools never
 branch on which store they are talking to.
 
-**One store failing doesn't sink the call.** Reads fan out with `Promise.allSettled`. If
-Play is down, App Store reviews still come back, with a note explaining what is missing.
-An empty list and a broken credential should never look the same.
+**One store failing doesn't sink the call.** Reads fan out across stores and across apps, and
+a failure on either axis is collected rather than thrown. If Play is down, App Store reviews
+still come back — with the Play failure named in the text and listed in `unavailable`, so the
+model can tell the user the answer is partial. An empty list and a broken credential must never
+look the same; a test asserts they don't.
 
 **Errors carry the fix.** A `403` from Play says the service account may lack access *or*
 the Android Publisher API may be disabled for its project. A `404` says to call
