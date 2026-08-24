@@ -3,7 +3,7 @@
   "name": "io.github.JohnBilousov/appstore-play-mcp",
   "title": "App Store & Google Play",
   "description": "Read-only access to App Store Connect and Google Play: apps, releases, and reviews.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "websiteUrl": "https://github.com/JohnBilousov/appstore-play-mcp",
   "repository": {
     "url": "https://github.com/JohnBilousov/appstore-play-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "appstore-play-mcp",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

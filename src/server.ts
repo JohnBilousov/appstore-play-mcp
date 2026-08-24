@@ -25,7 +25,7 @@ import {
   type StoreClient,
 } from "./stores/types.js";
 
-export const VERSION = "0.1.2";
+export const VERSION = "0.1.3";
 
 export type StoreFilter = "appstore" | "play" | "both" | undefined;
 

@@ -6,12 +6,15 @@ follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-24
+
 ### Added
 - Cursor pagination on `get_reviews`: both clients return `nextCursor` when more results exist —
   the App Store's `links.next` (a full URL, fetched as-is) and Play's `tokenPagination.nextPageToken`
   (round-tripped through a `token` query parameter). A cursor is rejected when it would apply to
   more than one resolved app, since "next page" isn't well-defined for a portfolio sweep.
-- CI on Node 20, 22, and 24 (typecheck, test, build) on every push and pull request.
+- CI on Node 20, 22, and 24 (typecheck, lint, format check, test, build) on every push and pull
+  request.
 - A provenance-signed npm publish workflow, triggered by a GitHub Release.
 - 41 network-layer tests for both auth clients: real EC/RSA keys generated per run, signatures
   verified against the matching public key with `node:crypto`, token caching and refresh-at-skew,
@@ -19,6 +22,8 @@ follows [SemVer](https://semver.org/).
 - Review title and body are now explicitly marked as untrusted input: a `SECURITY` note on
   `get_reviews`'s description, annotated schema fields, and every response wraps the reviewer's own
   text in `« »` with a one-line reminder not to treat it as instructions.
+- ESLint and Prettier, wired into CI.
+- `CHANGELOG.md` and `SECURITY.md`. GitHub private vulnerability reporting is now enabled on the repo.
 
 ### Changed
 - `Review.territory` (App Store, an ISO country) and `Review.language` (Play, the reviewer's
