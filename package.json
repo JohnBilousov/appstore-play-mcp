@@ -1,7 +1,7 @@
 {
   "name": "appstore-play-mcp",
-  "version": "0.1.1",
-  "mcpName": "io.github.johnbilousov/appstore-play-mcp",
+  "version": "0.1.2",
+  "mcpName": "io.github.JohnBilousov/appstore-play-mcp",
   "description": "Read-only MCP server for App Store Connect and Google Play — one set of tools over both stores: apps, releases, reviews, crash vitals, sales.",
   "license": "MIT",
   "author": "Ivan Bilousov",

@@ -164,6 +164,15 @@ describe("release metadata", () => {
     expect(registry.name).toBe(pkg.mcpName);
   });
 
+  // The registry namespace is case-sensitive and must match the GitHub owner
+  // exactly: io.github.johnbilousov was rejected where io.github.JohnBilousov
+  // is granted. Derive it from the repository URL rather than trusting a
+  // hand-typed string.
+  it("matches the namespace to the GitHub owner, case included", () => {
+    const owner = new URL(registry.repository.url).pathname.split("/")[1];
+    expect(registry.name).toBe(`io.github.${owner}/${pkg.name}`);
+  });
+
   it("stays inside the registry's description limit", () => {
     expect(registry.description.length).toBeLessThanOrEqual(100);
   });

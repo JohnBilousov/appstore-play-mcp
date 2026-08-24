@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.johnbilousov/appstore-play-mcp",
+  "name": "io.github.JohnBilousov/appstore-play-mcp",
   "title": "App Store & Google Play",
   "description": "Read-only access to App Store Connect and Google Play: apps, releases, and reviews.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://github.com/JohnBilousov/appstore-play-mcp",
   "repository": {
     "url": "https://github.com/JohnBilousov/appstore-play-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "appstore-play-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
