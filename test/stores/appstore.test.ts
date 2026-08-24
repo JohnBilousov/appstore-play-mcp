@@ -29,7 +29,9 @@ let publicKey: crypto.KeyObject;
 beforeAll(() => {
   // A real .p8 is a PKCS8 EC private key on the P-256 curve — generate one so
   // the ES256 signing path runs for real instead of being mocked away.
-  const { privateKey, publicKey: pub } = crypto.generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const { privateKey, publicKey: pub } = crypto.generateKeyPairSync("ec", {
+    namedCurve: "prime256v1",
+  });
   privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
   publicKey = pub;
   keyId = "TESTKEY001";
@@ -81,8 +83,12 @@ describe("AppStoreClient — token signing", () => {
     await c.listApps();
     await c.listApps();
 
-    const [firstAuth] = fetchMock.mock.calls.map(([, init]) => (init.headers as Record<string, string>).Authorization);
-    const [secondAuth] = fetchMock.mock.calls.slice(1).map(([, init]) => (init.headers as Record<string, string>).Authorization);
+    const [firstAuth] = fetchMock.mock.calls.map(
+      ([, init]) => (init.headers as Record<string, string>).Authorization,
+    );
+    const [secondAuth] = fetchMock.mock.calls
+      .slice(1)
+      .map(([, init]) => (init.headers as Record<string, string>).Authorization);
     expect(firstAuth).toBe(secondAuth);
     expect(fetchMock).toHaveBeenCalledTimes(2); // two HTTP calls, one signature
   });
@@ -106,14 +112,15 @@ describe("AppStoreClient — token signing", () => {
   it("does not re-wrap a signing failure with a generic network message", async () => {
     const broken = client({ privateKey: "not a real PEM key" });
 
-    await expect(broken.listApps()).rejects.toMatchObject({
-      name: "StoreError",
-      status: 0,
-    });
+    const error = await broken.listApps().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(StoreError);
     // The finding this guards against: get()'s catch block used to wrap
     // *any* thrown error, turning "Could not sign a token…" into
     // "App Store request failed: StoreError: Could not sign a token…".
-    await expect(broken.listApps()).rejects.toThrow(/^Could not sign a token/);
+    expect(error).toMatchObject({
+      status: 0,
+      message: expect.stringMatching(/^Could not sign a token/),
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -121,14 +128,16 @@ describe("AppStoreClient — token signing", () => {
 describe("AppStoreClient — HTTP error mapping", () => {
   it("extracts the detail message and a hint from a 401 response", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse(401, { errors: [{ status: "401", title: "Unauthenticated", detail: "The token is expired" }] }),
+      jsonResponse(401, {
+        errors: [{ status: "401", title: "Unauthenticated", detail: "The token is expired" }],
+      }),
     );
 
-    await expect(client().listApps()).rejects.toMatchObject({
-      name: "StoreError",
-      status: 401,
-      message: "The token is expired",
-    });
+    const error = await client()
+      .listApps()
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(StoreError);
+    expect(error).toMatchObject({ status: 401, message: "The token is expired" });
   });
 
   it("falls back to a bare status when the error body is not JSON", async () => {
@@ -195,7 +204,11 @@ describe("AppStoreClient — response parsing", () => {
           },
         ],
         included: [
-          { id: "resp1", type: "customerReviewResponses", attributes: { responseBody: "Fixed in 2.1.1, thanks!" } },
+          {
+            id: "resp1",
+            type: "customerReviewResponses",
+            attributes: { responseBody: "Fixed in 2.1.1, thanks!" },
+          },
         ],
       }),
     );
@@ -224,7 +237,10 @@ describe("AppStoreClient — reviews: rating filter and pagination", () => {
   it("surfaces links.next as nextCursor", async () => {
     const nextUrl = "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?cursor=abc";
     fetchMock.mockResolvedValueOnce(
-      jsonResponse(200, { data: [{ id: "r1", type: "customerReviews", attributes: { rating: 5, body: "x" } }], links: { next: nextUrl } }),
+      jsonResponse(200, {
+        data: [{ id: "r1", type: "customerReviews", attributes: { rating: 5, body: "x" } }],
+        links: { next: nextUrl },
+      }),
     );
 
     const { nextCursor } = await client().getReviews("123", {});

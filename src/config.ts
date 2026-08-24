@@ -26,16 +26,25 @@ function truthy(value: string | undefined): boolean {
   return !!value && ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
 }
 
-function readKeyMaterial(inline: string | undefined, path: string | undefined, label: string): string {
+function readKeyMaterial(
+  inline: string | undefined,
+  path: string | undefined,
+  label: string,
+): string {
   if (inline && path) {
     throw new ConfigError(`Set either ${label}_PRIVATE_KEY or ${label}_KEY_PATH, not both.`);
   }
   if (inline) return inline.replace(/\\n/g, "\n");
-  if (!path) throw new ConfigError(`${label}: no key material. Set ${label}_KEY_PATH or ${label}_PRIVATE_KEY.`);
+  if (!path)
+    throw new ConfigError(
+      `${label}: no key material. Set ${label}_KEY_PATH or ${label}_PRIVATE_KEY.`,
+    );
   try {
     return readFileSync(path, "utf8");
   } catch (error) {
-    throw new ConfigError(`${label}: could not read ${path} — ${error instanceof Error ? error.message : error}`);
+    throw new ConfigError(
+      `${label}: could not read ${path} — ${error instanceof Error ? error.message : error}`,
+    );
   }
 }
 
@@ -62,7 +71,9 @@ function loadPlay(env: NodeJS.ProcessEnv): PlayCredentials | undefined {
 
   if (!path && !inline) {
     if (packages.length > 0) {
-      throw new ConfigError("Play: PLAY_PACKAGES is set but no service account. Set PLAY_SERVICE_ACCOUNT_PATH.");
+      throw new ConfigError(
+        "Play: PLAY_PACKAGES is set but no service account. Set PLAY_SERVICE_ACCOUNT_PATH.",
+      );
     }
     return undefined;
   }

@@ -73,9 +73,13 @@ describe("config", () => {
   it("names the missing half instead of failing vaguely", () => {
     expect(() => loadConfig({ ASC_KEY_ID: "K" } as NodeJS.ProcessEnv)).toThrow(/ASC_ISSUER_ID/);
     expect(() =>
-      loadConfig({ PLAY_SERVICE_ACCOUNT_JSON: '{"client_email":"a","private_key":"b"}' } as NodeJS.ProcessEnv),
+      loadConfig({
+        PLAY_SERVICE_ACCOUNT_JSON: '{"client_email":"a","private_key":"b"}',
+      } as NodeJS.ProcessEnv),
     ).toThrow(/PLAY_PACKAGES/);
-    expect(() => loadConfig({ PLAY_PACKAGES: "com.a" } as NodeJS.ProcessEnv)).toThrow(/service account/i);
+    expect(() => loadConfig({ PLAY_PACKAGES: "com.a" } as NodeJS.ProcessEnv)).toThrow(
+      /service account/i,
+    );
   });
 });
 
@@ -149,7 +153,10 @@ describe("appstore-play-mcp over MCP", () => {
 
   it("refuses a cursor when it would apply to more than one app", async () => {
     const client = await connectDemoClient();
-    const result = await client.callTool({ name: "get_reviews", arguments: { cursor: "some-token" } });
+    const result = await client.callTool({
+      name: "get_reviews",
+      arguments: { cursor: "some-token" },
+    });
     expect(result.isError).toBe(true);
     expect(JSON.stringify(result.content)).toContain("appId");
   });
@@ -164,7 +171,10 @@ describe("appstore-play-mcp over MCP", () => {
 
   it("explains an unmatched app instead of returning nothing", async () => {
     const client = await connectDemoClient();
-    const result = await client.callTool({ name: "get_releases", arguments: { appId: "com.nope.missing" } });
+    const result = await client.callTool({
+      name: "get_releases",
+      arguments: { appId: "com.nope.missing" },
+    });
     expect(result.isError).toBe(true);
     expect(JSON.stringify(result.content)).toContain("list_apps");
   });
@@ -187,7 +197,10 @@ describe("appstore-play-mcp over MCP", () => {
   it("reports health for both stores", async () => {
     const client = await connectDemoClient();
     const result = await client.callTool({ name: "stores_health", arguments: {} });
-    const { mode, stores } = result.structuredContent as { mode: string; stores: Array<{ ok: boolean }> };
+    const { mode, stores } = result.structuredContent as {
+      mode: string;
+      stores: Array<{ ok: boolean }>;
+    };
     expect(mode).toBe("demo");
     expect(stores).toHaveLength(2);
     expect(stores.every((store) => store.ok)).toBe(true);

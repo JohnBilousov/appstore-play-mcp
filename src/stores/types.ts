@@ -125,7 +125,10 @@ export function normalizeAppStoreState(state: string | undefined): ReleaseState 
 }
 
 /** Maps a Play release status (plus rollout share) onto the shared vocabulary. */
-export function normalizePlayState(status: string | undefined, userFraction?: number): ReleaseState {
+export function normalizePlayState(
+  status: string | undefined,
+  userFraction?: number,
+): ReleaseState {
   switch (status) {
     case "completed":
       return "live";

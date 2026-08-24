@@ -49,9 +49,13 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const server = createServer(config);
 
-  const configured = [config.appStore && "App Store", config.play && "Google Play"].filter(Boolean).join(" + ");
+  const configured = [config.appStore && "App Store", config.play && "Google Play"]
+    .filter(Boolean)
+    .join(" + ");
   console.error(
-    config.demo ? "appstore-play-mcp: demo mode — fixtures only." : `appstore-play-mcp: live — ${configured}`,
+    config.demo
+      ? "appstore-play-mcp: demo mode — fixtures only."
+      : `appstore-play-mcp: live — ${configured}`,
   );
 
   const transport = new StdioServerTransport();

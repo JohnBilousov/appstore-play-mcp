@@ -6,7 +6,6 @@ import {
   normalizePlayState,
   type AppSummary,
   type Release,
-  type Review,
   type ReviewPage,
   type ReviewQuery,
   type StoreClient,
@@ -89,7 +88,11 @@ export class PlayClient implements StoreClient {
 
     let assertion: string;
     try {
-      const signature = crypto.sign("RSA-SHA256", Buffer.from(signingInput), this.credentials.privateKey);
+      const signature = crypto.sign(
+        "RSA-SHA256",
+        Buffer.from(signingInput),
+        this.credentials.privateKey,
+      );
       assertion = `${signingInput}.${base64url(signature)}`;
     } catch (error) {
       throw new StoreError(
@@ -103,7 +106,10 @@ export class PlayClient implements StoreClient {
     const response = await fetch(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion,
+      }),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       access_token?: string;
@@ -143,7 +149,8 @@ export class PlayClient implements StoreClient {
       // leak "StoreError:" into text meant for a person. Same bug as the App
       // Store client's get() — fixed there first, missed here originally.
       if (error instanceof StoreError) throw error;
-      const reason = error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
+      const reason =
+        error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
       throw new StoreError(`Play request failed: ${reason}`, "play");
     } finally {
       clearTimeout(timer);
@@ -161,13 +168,18 @@ export class PlayClient implements StoreClient {
 
   /** Opens an edit, runs the read, and always deletes the edit afterwards. */
   private async withEdit<T>(packageName: string, read: (editId: string) => Promise<T>): Promise<T> {
-    const edit = await this.request<PlayEdit>("POST", `/applications/${encodeURIComponent(packageName)}/edits`, {});
+    const edit = await this.request<PlayEdit>(
+      "POST",
+      `/applications/${encodeURIComponent(packageName)}/edits`,
+      {},
+    );
     try {
       return await read(edit.id);
     } finally {
-      await this.request("DELETE", `/applications/${encodeURIComponent(packageName)}/edits/${edit.id}`).catch(
-        () => undefined,
-      );
+      await this.request(
+        "DELETE",
+        `/applications/${encodeURIComponent(packageName)}/edits/${edit.id}`,
+      ).catch(() => undefined);
     }
   }
 
@@ -213,10 +225,11 @@ export class PlayClient implements StoreClient {
     // listApps() could return placeholder names instead of throwing on a
     // dead credential.
     const name = await this.withEdit(packageName, async (editId) => {
-      const listings = await this.request<{ listings?: Array<{ language?: string; title?: string }> }>(
-        "GET",
-        `/applications/${encodeURIComponent(packageName)}/edits/${editId}/listings`,
-      ).catch(() => ({ listings: [] }));
+      const listings = await this.request<{
+        listings?: Array<{ language?: string; title?: string }>;
+      }>("GET", `/applications/${encodeURIComponent(packageName)}/edits/${editId}/listings`).catch(
+        () => ({ listings: [] }),
+      );
       return listings.listings?.[0]?.title;
     });
 
@@ -278,14 +291,19 @@ export class PlayClient implements StoreClient {
         }>;
       }>;
       tokenPagination?: { nextPageToken?: string };
-    }>("GET", `/applications/${encodeURIComponent(packageName)}/reviews?maxResults=${limit}${tokenParam}`);
+    }>(
+      "GET",
+      `/applications/${encodeURIComponent(packageName)}/reviews?maxResults=${limit}${tokenParam}`,
+    );
 
     const minRating = query.minRating ?? 1;
     const maxRating = query.maxRating ?? 5;
     const reviews = (payload.reviews ?? [])
       .map((review) => {
         const user = review.comments?.find((comment) => comment.userComment)?.userComment;
-        const developer = review.comments?.find((comment) => comment.developerComment)?.developerComment;
+        const developer = review.comments?.find(
+          (comment) => comment.developerComment,
+        )?.developerComment;
         const seconds = user?.lastModified?.seconds ? Number(user.lastModified.seconds) : undefined;
 
         return {

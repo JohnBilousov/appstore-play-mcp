@@ -40,7 +40,8 @@ export function formatReleases(releases: Array<Release & { appName?: string }>):
           release.buildNumber && !release.versionName.includes(release.buildNumber)
             ? ` (${release.buildNumber})`
             : "";
-        const version = release.versionName === "\u2014" ? "no build assigned" : `${release.versionName}${build}`;
+        const version =
+          release.versionName === "\u2014" ? "no build assigned" : `${release.versionName}${build}`;
         return `    ${release.track}: ${version} — ${STATE_LABEL[release.state] ?? release.state}${rollout}`;
       });
       return [`  ${app}`, ...lines].join("\n");

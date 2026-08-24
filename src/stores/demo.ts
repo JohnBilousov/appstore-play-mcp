@@ -135,7 +135,8 @@ const REVIEWS: Record<Store, Record<string, Review[]>> = {
         author: "m_kowalski",
         territory: "DEU",
         createdAt: "2026-08-17T07:41:00-07:00",
-        developerResponse: "Thank you for the report — a fix is in the 2.1.0 build now under review.",
+        developerResponse:
+          "Thank you for the report — a fix is in the 2.1.0 build now under review.",
       },
       {
         store: "appstore",
@@ -193,8 +194,16 @@ export class DemoStoreClient implements StoreClient {
   }
 
   async getApp(appId: string): Promise<AppSummary> {
-    const app = APPS[this.store].find((candidate) => candidate.id === appId || candidate.bundleId === appId);
-    if (!app) throw new StoreError(`No ${this.store} app with id ${appId}`, this.store, 404, "Call list_apps first.");
+    const app = APPS[this.store].find(
+      (candidate) => candidate.id === appId || candidate.bundleId === appId,
+    );
+    if (!app)
+      throw new StoreError(
+        `No ${this.store} app with id ${appId}`,
+        this.store,
+        404,
+        "Call list_apps first.",
+      );
     return app;
   }
 
@@ -207,7 +216,10 @@ export class DemoStoreClient implements StoreClient {
     const app = await this.getApp(appId);
     const all = REVIEWS[this.store][app.id] ?? [];
     const reviews = all
-      .filter((review) => review.rating >= (query.minRating ?? 1) && review.rating <= (query.maxRating ?? 5))
+      .filter(
+        (review) =>
+          review.rating >= (query.minRating ?? 1) && review.rating <= (query.maxRating ?? 5),
+      )
       .slice(0, query.limit ?? 25);
     // Fixture sets are small enough to always fit on one page.
     return { reviews };

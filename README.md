@@ -191,8 +191,12 @@ git clone https://github.com/JohnBilousov/appstore-play-mcp && cd appstore-play-
 npm install
 npm run build
 npm test          # tool surface + both auth clients against a mocked fetch, real key material throughout
+npm run lint      # eslint
+npm run format    # prettier --write
 npm run inspect
 ```
+
+CI runs `typecheck`, `lint`, `format:check`, `test`, and `build` on every push and pull request.
 
 ```
 src/

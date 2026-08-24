@@ -16,7 +16,14 @@ import {
 import { AppStoreClient } from "./stores/appstore.js";
 import { DemoStoreClient } from "./stores/demo.js";
 import { PlayClient } from "./stores/play.js";
-import { StoreError, type AppSummary, type Release, type Review, type Store, type StoreClient } from "./stores/types.js";
+import {
+  StoreError,
+  type AppSummary,
+  type Release,
+  type Review,
+  type Store,
+  type StoreClient,
+} from "./stores/types.js";
 
 export const VERSION = "0.1.2";
 
@@ -32,9 +39,22 @@ export function createClients(config: Config): StoreClient[] {
 
 function toErrorResult(error: unknown): CallToolResult {
   if (error instanceof StoreError) {
-    const where = error.store === "config" ? "Configuration" : error.store === "play" ? "Google Play" : "App Store";
+    const where =
+      error.store === "config"
+        ? "Configuration"
+        : error.store === "play"
+          ? "Google Play"
+          : "App Store";
     const hint = error.hint ? `\n${error.hint}` : "";
-    return { isError: true, content: [{ type: "text", text: `${where} error${error.status ? ` (${error.status})` : ""}: ${error.message}${hint}` }] };
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `${where} error${error.status ? ` (${error.status})` : ""}: ${error.message}${hint}`,
+        },
+      ],
+    };
   }
   const message = error instanceof Error ? error.message : String(error);
   return { isError: true, content: [{ type: "text", text: `Unexpected failure: ${message}` }] };
@@ -136,7 +156,9 @@ class Registry {
     if (pairs.length === 0) {
       const reason = notes.length > 0 ? ` No store could be read — ${notes.join(" · ")}.` : "";
       throw new StoreError(
-        appId ? `Nothing matched "${appId}".` : "No apps are reachable with the current credentials.",
+        appId
+          ? `Nothing matched "${appId}".`
+          : "No apps are reachable with the current credentials.",
         "config",
         404,
         `Call list_apps to see what is visible. On Play, apps must be named in PLAY_PACKAGES.${reason}`,
@@ -146,7 +168,10 @@ class Registry {
   }
 }
 
-export function createServer(config: Config, clients: StoreClient[] = createClients(config)): McpServer {
+export function createServer(
+  config: Config,
+  clients: StoreClient[] = createClients(config),
+): McpServer {
   const registry = new Registry(clients);
 
   const server = new McpServer(
@@ -178,7 +203,9 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
           clients.map(async (client) => ({ store: client.store, ...(await client.describe()) })),
         );
         const text = stores.length
-          ? stores.map((entry) => `${entry.ok ? "ok" : "failing"}  ${entry.store}: ${entry.detail}`).join("\n")
+          ? stores
+              .map((entry) => `${entry.ok ? "ok" : "failing"}  ${entry.store}: ${entry.detail}`)
+              .join("\n")
           : "No store is configured.";
         return {
           content: [{ type: "text", text: `${config.demo ? "Demo mode.\n" : ""}${text}` }],
@@ -211,7 +238,8 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
     "get_app",
     {
       title: "Get one app",
-      description: "Details for a single app, found by App Store id, Play package name, or bundle id.",
+      description:
+        "Details for a single app, found by App Store id, Play package name, or bundle id.",
       inputSchema: getAppShape,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
@@ -241,7 +269,10 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
         const { pairs, notes } = await registry.resolve(store, appId);
         const settled = await Promise.allSettled(
           pairs.map(async ({ client, app }) =>
-            (await client.getReleases(app.id)).map((release) => ({ ...release, appName: app.name })),
+            (await client.getReleases(app.id)).map((release) => ({
+              ...release,
+              appName: app.name,
+            })),
           ),
         );
         const releases: Array<Release & { appName: string }> = [];
@@ -294,7 +325,12 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
         let nextCursor: string | undefined;
         settled.forEach((result, index) => {
           if (result.status === "fulfilled") {
-            reviews.push(...result.value.page.reviews.map((review) => ({ ...review, appName: result.value.appName })));
+            reviews.push(
+              ...result.value.page.reviews.map((review) => ({
+                ...review,
+                appName: result.value.appName,
+              })),
+            );
             // A "next page" is only well-defined when exactly one app was queried.
             if (pairs.length === 1) nextCursor = result.value.page.nextCursor;
           } else {
@@ -304,7 +340,9 @@ export function createServer(config: Config, clients: StoreClient[] = createClie
 
         reviews.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
         const average =
-          reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : null;
+          reviews.length > 0
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+            : null;
 
         const text = withNotes(formatReviews(reviews), notes);
         const withCursorNote = nextCursor

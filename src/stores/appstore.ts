@@ -6,7 +6,6 @@ import {
   normalizeAppStoreState,
   type AppSummary,
   type Release,
-  type Review,
   type ReviewPage,
   type ReviewQuery,
   type StoreClient,
@@ -55,7 +54,9 @@ export class AppStoreClient implements StoreClient {
     if (this.token && this.token.expiresAt - TOKEN_SKEW_MS > now) return this.token.value;
 
     const issuedAt = Math.floor(now / 1000);
-    const header = base64url(JSON.stringify({ alg: "ES256", kid: this.credentials.keyId, typ: "JWT" }));
+    const header = base64url(
+      JSON.stringify({ alg: "ES256", kid: this.credentials.keyId, typ: "JWT" }),
+    );
     const payload = base64url(
       JSON.stringify({
         iss: this.credentials.issuerId,
@@ -102,7 +103,8 @@ export class AppStoreClient implements StoreClient {
       // bearer() already throws a StoreError with its own hint; re-wrapping it
       // would leak the class name into text meant for a person.
       if (error instanceof StoreError) throw error;
-      const reason = error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
+      const reason =
+        error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
       throw new StoreError(`App Store request failed: ${reason}`, "appstore");
     } finally {
       clearTimeout(timer);
@@ -144,13 +146,17 @@ export class AppStoreClient implements StoreClient {
       `/v1/apps/${encodeURIComponent(appId)}/appStoreVersions?limit=5&include=build`,
     );
     const data = Array.isArray(body.data) ? body.data : [];
-    const builds = new Map((body.included ?? []).filter((r) => r.type === "builds").map((r) => [r.id, r]));
+    const builds = new Map(
+      (body.included ?? []).filter((r) => r.type === "builds").map((r) => [r.id, r]),
+    );
 
     return data.map((version) => {
       const attributes = version.attributes ?? {};
       const rawState = String(attributes.appVersionState ?? attributes.appStoreState ?? "UNKNOWN");
       const buildId = version.relationships?.build?.data?.id;
-      const buildNumber = buildId ? (builds.get(buildId)?.attributes?.version as string | undefined) : undefined;
+      const buildNumber = buildId
+        ? (builds.get(buildId)?.attributes?.version as string | undefined)
+        : undefined;
 
       return {
         store: "appstore" as const,

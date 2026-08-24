@@ -17,11 +17,21 @@ function decodeJwtPart(value: string): Record<string, unknown> {
 
 function jsonResponse(status: number, body: unknown): Response {
   const text = JSON.stringify(body);
-  return { ok: status >= 200 && status < 300, status, json: async () => body, text: async () => text } as Response;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => text,
+  } as Response;
 }
 
 function emptyResponse(status = 200): Response {
-  return { ok: status >= 200 && status < 300, status, json: async () => ({}), text: async () => "" } as Response;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => ({}),
+    text: async () => "",
+  } as Response;
 }
 
 let clientEmail: string;
@@ -49,7 +59,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function client(packages: string[], overrides: Partial<{ clientEmail: string; privateKey: string }> = {}) {
+function client(
+  packages: string[],
+  overrides: Partial<{ clientEmail: string; privateKey: string }> = {},
+) {
   return new PlayClient({ clientEmail, privateKey: privateKeyPem, packages, ...overrides });
 }
 
@@ -62,7 +75,9 @@ function queueGetApp(accessToken = "tok-1") {
   fetchMock
     .mockResolvedValueOnce(jsonResponse(200, { access_token: accessToken, expires_in: 3600 }))
     .mockResolvedValueOnce(jsonResponse(200, { id: "edit-1" }))
-    .mockResolvedValueOnce(jsonResponse(200, { listings: [{ language: "en-US", title: "Example App" }] }))
+    .mockResolvedValueOnce(
+      jsonResponse(200, { listings: [{ language: "en-US", title: "Example App" }] }),
+    )
     .mockResolvedValueOnce(emptyResponse(204));
 }
 
@@ -137,8 +152,11 @@ describe("PlayClient — the transient edit is never left uncommitted", () => {
     await expect(client(["com.example.app"]).getReleases("com.example.app")).rejects.toThrow();
 
     const deleteCall = fetchMock.mock.calls.find(([, init]) => init?.method === "DELETE");
-    expect(deleteCall, "the edit must be deleted even though the read inside it failed").toBeDefined();
-    expect((deleteCall![0] as string)).toContain("/edits/edit-1");
+    expect(
+      deleteCall,
+      "the edit must be deleted even though the read inside it failed",
+    ).toBeDefined();
+    expect(deleteCall![0] as string).toContain("/edits/edit-1");
   });
 });
 
@@ -155,7 +173,9 @@ describe("PlayClient — guards and error mapping", () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse(200, { access_token: "tok-1", expires_in: 3600 }))
       .mockResolvedValueOnce(jsonResponse(200, { id: "edit-1" }))
-      .mockResolvedValueOnce(jsonResponse(403, { error: { message: "The caller does not have permission" } }))
+      .mockResolvedValueOnce(
+        jsonResponse(403, { error: { message: "The caller does not have permission" } }),
+      )
       .mockResolvedValueOnce(emptyResponse(204));
 
     await expect(client(["com.example.app"]).getReleases("com.example.app")).rejects.toMatchObject({
@@ -194,7 +214,9 @@ describe("PlayClient — reviews: rating filter and pagination", () => {
       }),
     );
 
-    const { reviews } = await client(["com.example.app"]).getReviews("com.example.app", { maxRating: 2 });
+    const { reviews } = await client(["com.example.app"]).getReviews("com.example.app", {
+      maxRating: 2,
+    });
     expect(reviews.map((r) => r.id)).toEqual(["r2"]);
   });
 
