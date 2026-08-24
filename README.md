@@ -213,13 +213,21 @@ test/
     play.test.ts       RS256/OAuth2 exchange, the transient-edit cleanup, the concurrency fix above
 ```
 
+## Releasing
+
+Bump the version in `package.json`, `server.json`, and `VERSION` in `src/server.ts` together (a
+test asserts they can't drift), commit, push, then publish a GitHub Release with a matching
+`vX.Y.Z` tag. That triggers [`.github/workflows/publish.yml`](.github/workflows/publish.yml),
+which runs the test suite and publishes to npm with [provenance](https://docs.npmjs.com/generating-provenance-statements)
+— the package page shows a verified link back to this exact commit and workflow run, not just a
+name on the registry.
+
 ## Roadmap
 
 - [ ] Sales and download reports from App Store Connect (needs a vendor number)
 - [ ] Crash and ANR vitals from the Play Developer Reporting API
 - [ ] TestFlight builds and tester groups
 - [ ] Streamable HTTP transport alongside stdio
-- [ ] Publish to the MCP registry
 
 Contributions welcome — especially from anyone who ships to both stores and has hit a
 limit worth documenting here.
