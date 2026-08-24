@@ -1,5 +1,6 @@
 # appstore-play-mcp
 
+[![CI](https://github.com/JohnBilousov/appstore-play-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/JohnBilousov/appstore-play-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/appstore-play-mcp)](https://www.npmjs.com/package/appstore-play-mcp)
 [![license](https://img.shields.io/npm/l/appstore-play-mcp)](./LICENSE)
 
