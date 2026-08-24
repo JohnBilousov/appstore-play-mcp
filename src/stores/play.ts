@@ -50,6 +50,7 @@ interface PlayTrackRelease {
 export class PlayClient implements StoreClient {
   readonly store = "play" as const;
   private token?: { value: string; expiresAt: number };
+  private tokenRequest?: Promise<string>;
   private appCache?: { at: number; apps: AppSummary[] };
 
   constructor(
@@ -60,7 +61,18 @@ export class PlayClient implements StoreClient {
   private async bearer(): Promise<string> {
     const now = Date.now();
     if (this.token && this.token.expiresAt - TOKEN_SKEW_MS > now) return this.token.value;
+    // Concurrent callers (listApps() opens an edit per package via
+    // Promise.all) would otherwise each see no cached token and mint their
+    // own — share the one in-flight exchange instead.
+    if (this.tokenRequest) return this.tokenRequest;
 
+    this.tokenRequest = this.requestToken(now).finally(() => {
+      this.tokenRequest = undefined;
+    });
+    return this.tokenRequest;
+  }
+
+  private async requestToken(now: number): Promise<string> {
     const issuedAt = Math.floor(now / 1000);
     const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
     const claim = base64url(
@@ -125,6 +137,11 @@ export class PlayClient implements StoreClient {
         signal: controller.signal,
       });
     } catch (error) {
+      // bearer() already throws a StoreError with its own hint (a signing
+      // failure, or a refused service account); re-wrapping it here would
+      // leak "StoreError:" into text meant for a person. Same bug as the App
+      // Store client's get() — fixed there first, missed here originally.
+      if (error instanceof StoreError) throw error;
       const reason = error instanceof Error && error.name === "AbortError" ? "timed out" : String(error);
       throw new StoreError(`Play request failed: ${reason}`, "play");
     } finally {
@@ -187,14 +204,20 @@ export class PlayClient implements StoreClient {
 
   async getApp(packageName: string): Promise<AppSummary> {
     this.assertKnown(packageName);
-    // The store listing title is the only human-readable name Play exposes.
+    // The store listing title is the only human-readable name Play exposes;
+    // if just that lookup fails, fall back to the package name rather than
+    // failing the whole call (the inner catch below). A broken edit or
+    // credential is a different kind of failure and must propagate — it used
+    // to be swallowed by a catch around the whole withEdit(), which meant
+    // listApps() could return placeholder names instead of throwing on a
+    // dead credential.
     const name = await this.withEdit(packageName, async (editId) => {
       const listings = await this.request<{ listings?: Array<{ language?: string; title?: string }> }>(
         "GET",
         `/applications/${encodeURIComponent(packageName)}/edits/${editId}/listings`,
       ).catch(() => ({ listings: [] }));
       return listings.listings?.[0]?.title;
-    }).catch(() => undefined);
+    });
 
     return {
       store: "play",

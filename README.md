@@ -180,7 +180,9 @@ the Android Publisher API may be disabled for its project. A `404` says to call
 `list_apps`. The model can usually recover without the user intervening.
 
 **Tokens are cached and refreshed early.** ES256 for Apple (20 min), RS256 → OAuth2 for
-Google (1 hour), both refreshed a minute before expiry so no call races the boundary.
+Google (1 hour), both refreshed a minute before expiry so no call races the boundary. The Play
+side also memoizes the in-flight exchange: `listApps()` opens an edit per package concurrently,
+and without that, each concurrent caller would see no cached token yet and mint its own.
 
 ## Development
 
