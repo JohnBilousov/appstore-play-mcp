@@ -1,5 +1,8 @@
 # appstore-play-mcp
 
+[![npm](https://img.shields.io/npm/v/appstore-play-mcp)](https://www.npmjs.com/package/appstore-play-mcp)
+[![license](https://img.shields.io/npm/l/appstore-play-mcp)](./LICENSE)
+
 A **read-only** MCP server for App Store Connect and Google Play. One set of tools over
 both stores, so you can ask "what's live, what's in review, and what are people
 complaining about?" once instead of twice.
@@ -25,18 +28,14 @@ tool is annotated `readOnlyHint`, and the test suite fails if that ever stops be
 No Apple key, no Google service account:
 
 ```bash
-git clone https://github.com/JohnBilousov/appstore-play-mcp && cd appstore-play-mcp
-npm install && npm run build
-node dist/index.js --demo
+npx -y appstore-play-mcp --demo
 ```
-
-> Not on npm yet. Once it is, this becomes `npx -y appstore-play-mcp --demo`.
 
 Demo mode serves fixtures for a fictional two-app developer — including a version stuck
 in review and a staged rollout at 20%, because those are the states worth looking at.
 
 ```bash
-npm run inspect   # the same fixtures in the MCP Inspector
+npx @modelcontextprotocol/inspector npx -y appstore-play-mcp --demo
 ```
 
 ## Tools
@@ -114,8 +113,8 @@ inline instead, for CI.
 {
   "mcpServers": {
     "stores": {
-      "command": "node",
-      "args": ["/absolute/path/to/appstore-play-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "appstore-play-mcp"],
       "env": {
         "ASC_KEY_ID": "XXXXXXXXXX",
         "ASC_ISSUER_ID": "00000000-0000-0000-0000-000000000000",
@@ -131,7 +130,7 @@ inline instead, for CI.
 Claude Code:
 
 ```bash
-claude mcp add stores -- node /absolute/path/to/appstore-play-mcp/dist/index.js
+claude mcp add stores -- npx -y appstore-play-mcp
 ```
 
 </details>
@@ -167,6 +166,7 @@ Google (1 hour), both refreshed a minute before expiry so no call races the boun
 ## Development
 
 ```bash
+git clone https://github.com/JohnBilousov/appstore-play-mcp && cd appstore-play-mcp
 npm install
 npm run build
 npm test          # tool surface, state normalisation, and portfolio sweeps over a real MCP transport
@@ -193,7 +193,7 @@ src/
 - [ ] Crash and ANR vitals from the Play Developer Reporting API
 - [ ] TestFlight builds and tester groups
 - [ ] Streamable HTTP transport alongside stdio
-- [ ] Publish to npm and the MCP registry
+- [ ] Publish to the MCP registry
 
 Contributions welcome — especially from anyone who ships to both stores and has hit a
 limit worth documenting here.
