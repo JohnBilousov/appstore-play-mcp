@@ -147,6 +147,13 @@ describe("appstore-play-mcp over MCP", () => {
     expect(new Set(reviews.map((review) => review.store)).size).toBe(2);
   });
 
+  it("refuses a cursor when it would apply to more than one app", async () => {
+    const client = await connectDemoClient();
+    const result = await client.callTool({ name: "get_reviews", arguments: { cursor: "some-token" } });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain("appId");
+  });
+
   it("sorts merged reviews newest first", async () => {
     const client = await connectDemoClient();
     const result = await client.callTool({ name: "get_reviews", arguments: {} });

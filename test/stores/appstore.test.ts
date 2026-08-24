@@ -200,7 +200,50 @@ describe("AppStoreClient — response parsing", () => {
       }),
     );
 
-    const [review] = await client().getReviews("123", {});
-    expect(review!.developerResponse).toBe("Fixed in 2.1.1, thanks!");
+    const { reviews } = await client().getReviews("123", {});
+    expect(reviews[0]!.developerResponse).toBe("Fixed in 2.1.1, thanks!");
+  });
+});
+
+describe("AppStoreClient — reviews: rating filter and pagination", () => {
+  it("filters by rating client-side — the API has no such parameter", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: [
+          { id: "r1", type: "customerReviews", attributes: { rating: 5, body: "great" } },
+          { id: "r2", type: "customerReviews", attributes: { rating: 1, body: "broken" } },
+          { id: "r3", type: "customerReviews", attributes: { rating: 2, body: "meh" } },
+        ],
+      }),
+    );
+
+    const { reviews } = await client().getReviews("123", { maxRating: 2 });
+    expect(reviews.map((r) => r.id)).toEqual(["r2", "r3"]);
+  });
+
+  it("surfaces links.next as nextCursor", async () => {
+    const nextUrl = "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?cursor=abc";
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { data: [{ id: "r1", type: "customerReviews", attributes: { rating: 5, body: "x" } }], links: { next: nextUrl } }),
+    );
+
+    const { nextCursor } = await client().getReviews("123", {});
+    expect(nextCursor).toBe(nextUrl);
+  });
+
+  it("fetches a cursor as-is instead of building a fresh query around it", async () => {
+    const nextUrl = "https://api.appstoreconnect.apple.com/v1/apps/123/customerReviews?cursor=abc";
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { data: [] }));
+
+    await client().getReviews("123", { cursor: nextUrl });
+
+    const [calledUrl] = fetchMock.mock.calls[0]!;
+    expect(calledUrl).toBe(nextUrl);
+  });
+
+  it("omits nextCursor once the last page has no links.next", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { data: [] }));
+    const { nextCursor } = await client().getReviews("123", {});
+    expect(nextCursor).toBeUndefined();
   });
 });

@@ -7,6 +7,7 @@ import {
   type AppSummary,
   type Release,
   type Review,
+  type ReviewPage,
   type ReviewQuery,
   type StoreClient,
 } from "./types.js";
@@ -34,6 +35,8 @@ interface JsonApiResource {
 interface JsonApiResponse {
   data?: JsonApiResource | JsonApiResource[];
   included?: JsonApiResource[];
+  /** `next`, when present, is a full URL — fetch it as-is for the next page. */
+  links?: { next?: string };
   errors?: Array<{ title?: string; detail?: string; status?: string }>;
 }
 
@@ -84,11 +87,14 @@ export class AppStoreClient implements StoreClient {
   }
 
   private async get(path: string): Promise<JsonApiResponse> {
+    // A pagination cursor from a previous response's links.next is already a
+    // complete URL — fetching `${API}${path}` against it would double it up.
+    const url = path.startsWith("http") ? path : `${API}${path}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
     try {
-      response = await fetch(`${API}${path}`, {
+      response = await fetch(url, {
         headers: { Authorization: `Bearer ${this.bearer()}` },
         signal: controller.signal,
       });
@@ -159,11 +165,14 @@ export class AppStoreClient implements StoreClient {
     });
   }
 
-  async getReviews(appId: string, query: ReviewQuery): Promise<Review[]> {
+  async getReviews(appId: string, query: ReviewQuery): Promise<ReviewPage> {
     const limit = Math.min(query.limit ?? 25, 200);
-    const body = await this.get(
-      `/v1/apps/${encodeURIComponent(appId)}/customerReviews?limit=${limit}&sort=-createdDate&include=response`,
-    );
+    // A cursor is already the full next-page URL; only build a fresh query on
+    // the first page.
+    const path =
+      query.cursor ??
+      `/v1/apps/${encodeURIComponent(appId)}/customerReviews?limit=${limit}&sort=-createdDate&include=response`;
+    const body = await this.get(path);
     const data = Array.isArray(body.data) ? body.data : [];
     const responses = new Map(
       (body.included ?? [])
@@ -171,22 +180,30 @@ export class AppStoreClient implements StoreClient {
         .map((r) => [r.id, String(r.attributes?.responseBody ?? "")]),
     );
 
-    return data.map((review) => {
-      const attributes = review.attributes ?? {};
-      const responseId = review.relationships?.response?.data?.id;
-      return {
-        store: "appstore" as const,
-        appId,
-        id: review.id,
-        rating: Number(attributes.rating ?? 0),
-        title: (attributes.title as string) || undefined,
-        body: String(attributes.body ?? ""),
-        author: (attributes.reviewerNickname as string) || undefined,
-        territory: (attributes.territory as string) || undefined,
-        createdAt: attributes.createdDate as string | undefined,
-        developerResponse: responseId ? responses.get(responseId) : undefined,
-      };
-    });
+    const minRating = query.minRating ?? 1;
+    const maxRating = query.maxRating ?? 5;
+    const reviews = data
+      .map((review) => {
+        const attributes = review.attributes ?? {};
+        const responseId = review.relationships?.response?.data?.id;
+        return {
+          store: "appstore" as const,
+          appId,
+          id: review.id,
+          rating: Number(attributes.rating ?? 0),
+          title: (attributes.title as string) || undefined,
+          body: String(attributes.body ?? ""),
+          author: (attributes.reviewerNickname as string) || undefined,
+          territory: (attributes.territory as string) || undefined,
+          createdAt: attributes.createdDate as string | undefined,
+          developerResponse: responseId ? responses.get(responseId) : undefined,
+        };
+      })
+      // The API has no rating filter of its own; it's applied client-side,
+      // same as the demo fixtures already did.
+      .filter((review) => review.rating >= minRating && review.rating <= maxRating);
+
+    return { reviews, nextCursor: body.links?.next };
   }
 }
 

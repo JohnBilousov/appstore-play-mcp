@@ -7,6 +7,7 @@ import {
   type AppSummary,
   type Release,
   type Review,
+  type ReviewPage,
   type ReviewQuery,
   type StoreClient,
 } from "./types.js";
@@ -256,9 +257,10 @@ export class PlayClient implements StoreClient {
     return releases;
   }
 
-  async getReviews(packageName: string, query: ReviewQuery): Promise<Review[]> {
+  async getReviews(packageName: string, query: ReviewQuery): Promise<ReviewPage> {
     this.assertKnown(packageName);
     const limit = Math.min(query.limit ?? 25, 100);
+    const tokenParam = query.cursor ? `&token=${encodeURIComponent(query.cursor)}` : "";
     const payload = await this.request<{
       reviews?: Array<{
         reviewId?: string;
@@ -275,28 +277,37 @@ export class PlayClient implements StoreClient {
           developerComment?: { text?: string };
         }>;
       }>;
-    }>("GET", `/applications/${encodeURIComponent(packageName)}/reviews?maxResults=${limit}`);
+      tokenPagination?: { nextPageToken?: string };
+    }>("GET", `/applications/${encodeURIComponent(packageName)}/reviews?maxResults=${limit}${tokenParam}`);
 
-    return (payload.reviews ?? []).map((review) => {
-      const user = review.comments?.find((comment) => comment.userComment)?.userComment;
-      const developer = review.comments?.find((comment) => comment.developerComment)?.developerComment;
-      const seconds = user?.lastModified?.seconds ? Number(user.lastModified.seconds) : undefined;
+    const minRating = query.minRating ?? 1;
+    const maxRating = query.maxRating ?? 5;
+    const reviews = (payload.reviews ?? [])
+      .map((review) => {
+        const user = review.comments?.find((comment) => comment.userComment)?.userComment;
+        const developer = review.comments?.find((comment) => comment.developerComment)?.developerComment;
+        const seconds = user?.lastModified?.seconds ? Number(user.lastModified.seconds) : undefined;
 
-      return {
-        store: "play" as const,
-        appId: packageName,
-        id: review.reviewId ?? "",
-        rating: user?.starRating ?? 0,
-        body: user?.text ?? "",
-        author: review.authorName || undefined,
-        // Play reports the reviewer's language, never a country — see Review.language.
-        language: user?.reviewerLanguage || undefined,
-        device: user?.device || undefined,
-        appVersion: user?.appVersionName || undefined,
-        createdAt: seconds ? new Date(seconds * 1000).toISOString() : undefined,
-        developerResponse: developer?.text || undefined,
-      };
-    });
+        return {
+          store: "play" as const,
+          appId: packageName,
+          id: review.reviewId ?? "",
+          rating: user?.starRating ?? 0,
+          body: user?.text ?? "",
+          author: review.authorName || undefined,
+          // Play reports the reviewer's language, never a country — see Review.language.
+          language: user?.reviewerLanguage || undefined,
+          device: user?.device || undefined,
+          appVersion: user?.appVersionName || undefined,
+          createdAt: seconds ? new Date(seconds * 1000).toISOString() : undefined,
+          developerResponse: developer?.text || undefined,
+        };
+      })
+      // The API has no rating filter of its own; it's applied client-side,
+      // same as the demo fixtures already did.
+      .filter((review) => review.rating >= minRating && review.rating <= maxRating);
+
+    return { reviews, nextCursor: payload.tokenPagination?.nextPageToken };
   }
 }
 

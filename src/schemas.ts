@@ -33,6 +33,12 @@ export const getReviewsShape = {
     .max(5)
     .optional()
     .describe("Only reviews at or below this rating. Set to 2 to triage complaints"),
+  cursor: z
+    .string()
+    .optional()
+    .describe(
+      "Continuation token from a previous call's nextCursor, to fetch the next page. Only valid when appId resolves to exactly one app",
+    ),
 };
 
 const appShape = z.object({
@@ -94,6 +100,10 @@ export const getReviewsOutput = {
     }),
   ),
   unavailable: unavailableShape,
+  nextCursor: z
+    .string()
+    .optional()
+    .describe("Pass back as cursor to fetch the next page. Absent when there are no more results"),
 };
 
 export const healthOutput = {

@@ -3,6 +3,7 @@ import {
   type AppSummary,
   type Release,
   type Review,
+  type ReviewPage,
   type ReviewQuery,
   type Store,
   type StoreClient,
@@ -202,11 +203,13 @@ export class DemoStoreClient implements StoreClient {
     return RELEASES[this.store][app.id] ?? [];
   }
 
-  async getReviews(appId: string, query: ReviewQuery): Promise<Review[]> {
+  async getReviews(appId: string, query: ReviewQuery): Promise<ReviewPage> {
     const app = await this.getApp(appId);
     const all = REVIEWS[this.store][app.id] ?? [];
-    return all
+    const reviews = all
       .filter((review) => review.rating >= (query.minRating ?? 1) && review.rating <= (query.maxRating ?? 5))
       .slice(0, query.limit ?? 25);
+    // Fixture sets are small enough to always fit on one page.
+    return { reviews };
   }
 }

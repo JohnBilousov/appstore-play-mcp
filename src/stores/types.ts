@@ -67,6 +67,14 @@ export interface ReviewQuery {
   limit?: number;
   minRating?: number;
   maxRating?: number;
+  /** Opaque continuation token from a previous getReviews() call's nextCursor. */
+  cursor?: string;
+}
+
+export interface ReviewPage {
+  reviews: Review[];
+  /** Present when the store reports more results; pass back as ReviewQuery.cursor to continue. */
+  nextCursor?: string;
 }
 
 export interface StoreClient {
@@ -76,7 +84,7 @@ export interface StoreClient {
   listApps(): Promise<AppSummary[]>;
   getApp(appId: string): Promise<AppSummary>;
   getReleases(appId: string): Promise<Release[]>;
-  getReviews(appId: string, query: ReviewQuery): Promise<Review[]>;
+  getReviews(appId: string, query: ReviewQuery): Promise<ReviewPage>;
 }
 
 export class StoreError extends Error {

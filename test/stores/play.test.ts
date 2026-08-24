@@ -177,3 +177,44 @@ describe("PlayClient — app list cache", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4); // only the first call touched the network
   });
 });
+
+function queueToken() {
+  fetchMock.mockResolvedValueOnce(jsonResponse(200, { access_token: "tok-1", expires_in: 3600 }));
+}
+
+describe("PlayClient — reviews: rating filter and pagination", () => {
+  it("filters by rating client-side — the API has no such parameter", async () => {
+    queueToken();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        reviews: [
+          { reviewId: "r1", comments: [{ userComment: { starRating: 5, text: "great" } }] },
+          { reviewId: "r2", comments: [{ userComment: { starRating: 1, text: "broken" } }] },
+        ],
+      }),
+    );
+
+    const { reviews } = await client(["com.example.app"]).getReviews("com.example.app", { maxRating: 2 });
+    expect(reviews.map((r) => r.id)).toEqual(["r2"]);
+  });
+
+  it("surfaces tokenPagination.nextPageToken as nextCursor", async () => {
+    queueToken();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { reviews: [], tokenPagination: { nextPageToken: "page-2-token" } }),
+    );
+
+    const { nextCursor } = await client(["com.example.app"]).getReviews("com.example.app", {});
+    expect(nextCursor).toBe("page-2-token");
+  });
+
+  it("sends a cursor back as the token query parameter", async () => {
+    queueToken();
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { reviews: [] }));
+
+    await client(["com.example.app"]).getReviews("com.example.app", { cursor: "page-2-token" });
+
+    const [, reviewsUrl] = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(new URL(reviewsUrl!).searchParams.get("token")).toBe("page-2-token");
+  });
+});
