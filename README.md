@@ -190,7 +190,7 @@ and without that, each concurrent caller would see no cached token yet and mint 
 git clone https://github.com/JohnBilousov/appstore-play-mcp && cd appstore-play-mcp
 npm install
 npm run build
-npm test          # tool surface, state normalisation, and portfolio sweeps over a real MCP transport
+npm test          # tool surface + both auth clients against a mocked fetch, real key material throughout
 npm run inspect
 ```
 
@@ -206,6 +206,11 @@ src/
     appstore.ts     App Store Connect (ES256 JWT)
     play.ts         Google Play (service account → OAuth2)
     demo.ts         fixtures
+test/
+  server.test.ts    tool surface, state normalisation, portfolio sweeps — over a real MCP transport
+  stores/
+    appstore.test.ts  ES256 signing verified against the public key, token caching, error mapping
+    play.test.ts       RS256/OAuth2 exchange, the transient-edit cleanup, the concurrency fix above
 ```
 
 ## Roadmap
