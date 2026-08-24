@@ -70,6 +70,9 @@ Each store's own wording is preserved in `rawState`, so nothing is lost in trans
 
 ## Setup
 
+Listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.JohnBilousov/appstore-play-mcp`, so clients that read the registry can find it on
+their own.
+
 Either store works on its own — configure one, both, or neither (fixtures).
 
 <details open>
